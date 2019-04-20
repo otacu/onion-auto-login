@@ -4,4 +4,4 @@
 
 识别验证码需要的英文字库在[tesseract-ocr/tessdata](https://github.com/tesseract-ocr/tessdata)下载。
 
-自定义字库在http://trainyourtesseract.com/生成。
+自定义字库在http://trainyourtesseract.com 生成。
