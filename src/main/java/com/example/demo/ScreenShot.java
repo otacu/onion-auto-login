@@ -32,12 +32,72 @@ public class ScreenShot {
     private static WebDriver driver;
 
     public static void main(String[] args) throws Exception {
+        // 注意chromedriver的版本要和chrome浏览器的版本一致
         System.setProperty("webdriver.chrome.driver", "E:\\yjs\\application\\chromedriver.exe");
         driver = new ChromeDriver();
         driver.get("https://cosyfans-passport.buykerbuyker.cn/en/login.html");
         // 页面最大化
         driver.manage().window().maximize();
-        // 将页面二维码元素截屏
+        // 递归直到验证码输入无误
+        recursion();
+        //点击登录
+        driver.findElement(By.className("login-btn")).click();
+        Thread.sleep(3000);
+        // 聚焦搜索框
+        Actions focusSearchBoxAction = new Actions(driver);
+        focusSearchBoxAction.moveToElement(driver.findElement(By.className("home-search-box")));
+        focusSearchBoxAction.click();
+        focusSearchBoxAction.build().perform();
+        Thread.sleep(4000);
+        // 输入关键字
+        WebElement searchBoxElement = driver.findElement(By.xpath("//div[@class='overwrite-title-demo seek-form']/div/input"));
+//        searchBoxElement.sendKeys("fanwai");
+        searchBoxElement.sendKeys("skinyisi");
+        WebElement confirmSearchElement = driver.findElement(By.xpath("//div[@class='overwrite-title-demo seek-form']/a"));
+        confirmSearchElement.click();
+        Thread.sleep(3000);
+        // 点击商品
+        List<WebElement> itemElementList = driver.findElements(By.xpath("//div[@class='vux-flexbox-item']"));
+        itemElementList.get(0).findElement(By.xpath("div/a")).click();
+        Thread.sleep(2000);
+        // 加入购物车
+        WebElement buyNowButton = driver.findElement(By.xpath("//a[@class='but buy-now']"));
+        buyNowButton.click();
+        Thread.sleep(1000);
+        WebElement addToCartButton = driver.findElement(By.xpath("//div[@class='vux-popup-dialog vux-popup-bottom vux-popup-show']/div/div[3]/a"));
+        addToCartButton.click();
+        Thread.sleep(3000);
+        // 跳转到购物车页面
+        WebElement goToCartButton = driver.findElement(By.xpath("//div[@class='details-footer']/div[1]/a[2]"));
+        goToCartButton.click();
+        Thread.sleep(3000);
+        // 选择商品
+        WebElement sellectAllButton = driver.findElement(By.xpath("//div[@class='word-choice-box']"));
+        sellectAllButton.click();
+        Thread.sleep(1000);
+        // 提交购物车
+        WebElement checkOutButton = driver.findElement(By.xpath("//a[@class='sub-cart']"));
+        checkOutButton.click();
+        Thread.sleep(2000);
+        // 确认下单
+        WebElement placeOrderButton = driver.findElement(By.xpath("//div[@class='place-order-footer-c']/a"));
+        placeOrderButton.click();
+        Thread.sleep(2000);
+        // 选择支付方式
+        WebElement payWayButton = driver.findElement(By.xpath("//div[@class='vux-popup-dialog vux-popup-bottom vux-popup-show']/div/div/div[2]/ul/li[1]/a"));
+        payWayButton.click();
+        Thread.sleep(400000);
+        driver.quit();
+
+    }
+
+    /**
+     * 递归输入验证码
+     *
+     * @throws Exception
+     */
+    public static void recursion() throws Exception {
+        // 将页面要点击的图片截屏
         WebElement codeImageElement = driver.findElement(By.id("myCanvas"));
         elementSnapshot(codeImageElement);
         File originCodeFile = new File(ORIGIN_CODE_FILE_PATH);
@@ -55,21 +115,26 @@ public class ScreenShot {
         int start = targetCode.indexOf("【") + 1;
         int end = targetCode.indexOf("】");
         targetCode = targetCode.substring(start, end);
+        // 点击图片中的字母
         org.openqa.selenium.Rectangle codeImageRectangle = codeImageElement.getRect();
-        for (int i=0; i<targetCode.length();i++) {
+        int clickNum = 0;
+        for (int i = 0; i < targetCode.length(); i++) {
             String targetCharacter = String.valueOf(targetCode.charAt(i));
             CharacterInfo characterInfo = characterInfoMap.get(targetCharacter);
             int xOffset = codeImageRectangle.getX() + characterInfo.getX();
             int yOffset = codeImageRectangle.getY() + characterInfo.getY();
             Actions action = new Actions(driver);
+            // 移到字母上点击，然后重置到起点位置
             action.moveByOffset(xOffset, yOffset).click().moveByOffset(-xOffset, -yOffset).perform();
+            clickNum++;
         }
-        //点击登录
-        driver.findElement(By.className("login-btn")).click();
-        Thread.sleep(2000);
-        driver.getCurrentUrl();
-        driver.quit();
-
+        // 是否验证通过
+        WebElement verifySuccessTipsElement = driver.findElement(By.className("set"));
+        String css = verifySuccessTipsElement.getAttribute("class");
+        if (!css.contains("succeed") || clickNum < 3) {
+            driver.navigate().refresh();
+            recursion();
+        }
     }
 
     /**
@@ -117,7 +182,7 @@ public class ScreenShot {
             // 去掉换行、空格等字符
             List<String> codeLetterList = new ArrayList<String>();
             List<String> allUppercaseLetterList = getAllUppercaseLetter();
-            for (int j=0;j<code.length();j++) {
+            for (int j = 0; j < code.length(); j++) {
                 String codeLetter = String.valueOf(code.charAt(j));
                 if (allUppercaseLetterList.contains(codeLetter)) {
                     codeLetterList.add(codeLetter.toUpperCase());
@@ -126,13 +191,13 @@ public class ScreenShot {
             BufferedImage bi = ImageIO.read(transferedFile);
             int level = ITessAPI.TessPageIteratorLevel.RIL_SYMBOL;
             List<Rectangle> list = instance.getSegmentedRegions(bi, level);
-            for (int i=0;i<list.size();i++){
+            for (int i = 0; i < list.size(); i++) {
                 CharacterInfo characterInfo = new CharacterInfo();
                 String value = String.valueOf(codeLetterList.get(i));
                 characterInfo.setValue(value);
                 Rectangle rectangle = list.get(i);
-                characterInfo.setX(rectangle.x + rectangle.width/2);
-                characterInfo.setY(rectangle.y + rectangle.height/2);
+                characterInfo.setX(rectangle.x + rectangle.width / 2);
+                characterInfo.setY(rectangle.y + rectangle.height / 2);
                 characterInfoMap.put(value, characterInfo);
             }
         } catch (Exception e) {
@@ -141,14 +206,13 @@ public class ScreenShot {
         return characterInfoMap;
     }
 
-    private static List<String> getAllUppercaseLetter(){
+    private static List<String> getAllUppercaseLetter() {
         List<String> letterList = new ArrayList<String>();
         char firstE = 'A', lastE = 'Z';
-        int firstEnglish = (int)firstE;
-        int lastEnglish = (int)lastE;
-        for(int i = firstEnglish; i <= lastEnglish; ++i)
-        {
-            char uppercase = (char)i;
+        int firstEnglish = (int) firstE;
+        int lastEnglish = (int) lastE;
+        for (int i = firstEnglish; i <= lastEnglish; ++i) {
+            char uppercase = (char) i;
             letterList.add(String.valueOf(uppercase));
         }
         return letterList;
