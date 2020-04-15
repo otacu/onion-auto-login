@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class ScreenShot {
+public class OnionRunScript {
     static final String ORIGIN_CODE_FILE_PATH = "originCode.png";
 
     static final String TRANSFERED_CODE_FILE_PATH = "transferedCode.png";
@@ -99,7 +99,6 @@ public class ScreenShot {
     public static void recursion() throws Exception {
         // 将页面要点击的图片截屏
         WebElement codeImageElement = driver.findElement(By.id("myCanvas"));
-        elementSnapshot(codeImageElement);
         File originCodeFile = new File(ORIGIN_CODE_FILE_PATH);
         FileUtils.copyFile(elementSnapshot(codeImageElement), originCodeFile);
         // 图片二值化
